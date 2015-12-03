@@ -1,7 +1,6 @@
 var tokmz = require('../src/tokmz.js');
 var fs = require('fs');
 var logger = require('log4js').getLogger();
-var bluebird = require('bluebird');
 
 var chai = require('chai');
 var expect = chai.expect;
@@ -45,7 +44,7 @@ describe('Testing tokmz()', function() {
     };
 
     var polygonSymbol = {
-        color: [255, 0, 0],
+        color: '#000',
         fill: true,
         outline: false
     };
@@ -76,15 +75,11 @@ describe('Testing tokmz()', function() {
     ];
 
     it('should save the object array as a KML file with Q.', function() {
-        tokmz(layers, fileName, {
-          promiseLib: bluebird
-        })
-        .then(function(file) {
+        tokmz(layers, fileName, function(err) {
+            if(err) { console.error(err); }
+
             expect(fs.statSync(fileName)).to.exist;
         })
-        .catch(function(err) {
-            logger.error(err);
-        });
     });
 
 });

@@ -11,25 +11,24 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/haoliangyu/tokmz.git"
+    "url": "git+https://github.com/NBTSolutions/tokmz.git"
   },
   "keywords": [
     "kmz",
     "geojson"
   ],
-  "author": "Haoliang Yu <haholiang.yu@outlook.com>",
+  "author": "Haoliang Yu <haholiang.yu@nbtsolutions.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/haoliangyu/tokmz/issues"
+    "url": "https://github.com/NBTSolutions/tokmz/issues"
   },
-  "homepage": "https://github.com/haoliangyu/tokmz#readme",
+  "homepage": "https://github.com/NBTSolutions/tokmz#readme",
   "dependencies": {
     "elementtree": "^0.1.6",
-    "gtran-kml": "^1.0.0",
+    "gtran-kml": "git://github.com/NBTSolutions/gtran-kml.git#master",
     "jszip": "^2.5.0"
   },
   "devDependencies": {
-    "bluebird": "^3.0.5",
     "chai": "^3.4.1",
     "log4js": "^0.6.27",
     "mocha": "^2.3.3"

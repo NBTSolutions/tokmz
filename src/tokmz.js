@@ -1,75 +1,57 @@
 'use strict';
 
 var et = require('elementtree');
-var kml = require('gtran-kml');
+var tokml = require('gtran-kml');
 var JSZip = require('jszip');
-var promiseLib = require('./promise.js');
 var fs = require('fs');
 
-var Promise;
+module.exports = function(layers, fileName, callback) {
+    var kmlList = [];
+    generateKmls('doc', layers, kmlList);
 
-module.exports = function(layers, fileName, options) {
-    if(options) {
-        Promise = promiseLib.set(options.promiseLib);
-        kml.setPromiseLib(options.promiseLib);
-    } else {
-        Promise = promiseLib.set();
-        kml.setPromiseLib();
-    }
+    var zip = JSZip();
+    var root = et.Element('kml');
+    root.attrib.xmlns = 'http://www.opengis.net/kml/2.2';
 
-    var taskList = [];
-    generateTaskList('doc', layers, taskList);
+    var doc = et.SubElement(root, 'Document');
 
-    return Promise.all(taskList)
-    .then(function(results) {
-        var zip = JSZip();
+    kmlList.forEach(function(kml) {
+        var fullPath = kml.directory + '/' + kml.fileName + '.kml';
 
-        var root = et.Element('kml');
-        root.attrib.xmlns = 'http://www.opengis.net/kml/2.2';
+        zip.file(fullPath, kml.data);
 
-        var doc = et.SubElement(root, 'Document');
-
-        results.forEach(function(result) {
-            var fullPath = result.directory + '/' + result.fileName + '.kml';
-
-            zip.file(fullPath, result.data);
-
-            var folderNode = getFolder(doc, result.directory.substring(4));
-            if(!folderNode) {
-                folderNode = createFolder(doc, result.directory.substring(4));
-            }
-
-            var networkLink = et.SubElement(folderNode, 'NetworkLink');
-
-            var name = et.SubElement(networkLink, 'name');
-            name.text = result.fileName;
-
-            var link = et.SubElement(networkLink, 'Link');
-            var href = et.SubElement(link, 'href');
-            href.text = fullPath;
-        });
-
-        var xmlTree = new et.ElementTree(root);
-
-        zip.file('doc.kml', xmlTree.write());
-        var buffer = zip.generate({type:"nodebuffer"});
-
-        return Promise.resolve(buffer);
-    })
-    .then(function(zip) {
-        if(fileName) {
-            fs.writeFile(fileName, zip, function(err) {
-                if(err) { return Promise.reject(err); }
-
-                return Promise.resolve(fileName);
-            });
-        } else {
-            return Promise.resolve(zip);
+        var folderNode = getFolder(doc, kml.directory.substring(4));
+        if(!folderNode) {
+            folderNode = createFolder(doc, kml.directory.substring(4));
         }
+
+        var networkLink = et.SubElement(folderNode, 'NetworkLink');
+
+        var name = et.SubElement(networkLink, 'name');
+        name.text = kml.fileName;
+
+        var link = et.SubElement(networkLink, 'Link');
+        var href = et.SubElement(link, 'href');
+        href.text = fullPath;
     });
+
+    var xmlTree = new et.ElementTree(root);
+
+    zip.file('doc.kml', xmlTree.write());
+    var buffer = zip.generate({type:"nodebuffer"});
+
+    if(fileName) {
+        fs.writeFile(fileName, buffer, function(err) {
+            if(callback) { callback(err, fileName); }
+            return fileName;
+        });
+    } else {
+        if(callback) { callback(null, buffer); }
+        return buffer;
+    }
 };
 
-function generateTaskList(filePath, layers, taskList) {
+function generateKmls(filePath, layers, kmlList) {
     layers.forEach(function(item) {
         var layerSymbol, featureName;
 
@@ -79,21 +61,25 @@ function generateTaskList(filePath, layers, taskList) {
         }
 
         if(item.type === 'layer') {
-            var task = kml.fromGeoJson(item.features, null, {
+            tokml.fromGeoJson(item.features, null, {
                 symbol: layerSymbol,
                 name: featureName
-            })
-            .then(function(result) {
-                return Promise.resolve({
+            }, function(err, file) {
+                if(err) {
+                    console.error('error generating kml', err);
+                    return;
+                }
+
+                var layerObject = {
                     directory: filePath,
                     fileName: item.name,
-                    data: result.data
-                });
-            });
+                    data: file
+                };
 
-            taskList.push(task);
+                kmlList.push(layerObject);
+            });
         } else {
-            generateTaskList(filePath + '/' + item.name, item.content, taskList);
+            generateKmls(filePath + '/' + item.name, item.content, kmlList);
         }
     });
 }
